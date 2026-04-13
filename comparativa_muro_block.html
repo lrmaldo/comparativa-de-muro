@@ -1,0 +1,326 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="font-sans text-slate-800 bg-gray-50 p-4 sm:p-6 lg:p-8">
+  <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+    <h2 class="text-lg sm:text-xl font-medium text-gray-900 mb-1">Comparativa de muro — precios unitarios</h2>
+    <p class="text-sm text-gray-500 mb-6">Ingresa dimensiones del muro y selecciona el tipo de acabado</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Largo (m)</label>
+        <input type="number" id="largo" value="5.20" step="0.01" min="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Alto (m)</label>
+        <input type="number" id="alto" value="2.75" step="0.01" min="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de block</label>
+        <select id="tipoBlock" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="hueco15">Block hueco 15×20×40 cm</option>
+          <option value="hueco12">Block hueco 12×20×40 cm</option>
+          <option value="solido">Block sólido 15×20×40 cm</option>
+          <option value="tabicon">Tabicón 14×14×28 cm</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de aplanado</label>
+        <select id="tipoAplanado" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          <option value="mortero">Aplanado mortero (ambas caras)</option>
+          <option value="yeso">Aplanado yeso (ambas caras)</option>
+          <option value="ninguno">Sin aplanado</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8" id="metricCards"></div>
+
+    <div class="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
+      <button class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-blue-50 text-blue-700 border border-blue-200" onclick="setTab('mat', this)">Materiales</button>
+      <button class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent" onclick="setTab('mo', this)">Mano de obra</button>
+      <button class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent" onclick="setTab('resumen', this)">Resumen total</button>
+    </div>
+
+    <div id="panelMat" class="overflow-x-auto"></div>
+    <div id="panelMo" class="overflow-x-auto" style="display:none"></div>
+    <div id="panelResumen" style="display:none"></div>
+
+    <p class="text-xs text-gray-400 mt-6">* Precios de referencia zona centro de México (abr 2025). IVA no incluido.</p>
+    <button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm" onclick="exportar()">Exportar comparativa como texto ↗</button>
+  </div>
+
+  <script>
+  const bloques = {
+    hueco15: { nombre: 'Block hueco 15×20×40', piezasM2: 12.5, precioUnitario: 9.5, juntaM2: 0.012 },
+    hueco12: { nombre: 'Block hueco 12×20×40', piezasM2: 12.5, precioUnitario: 8.0, juntaM2: 0.010 },
+    solido:  { nombre: 'Block sólido 15×20×40', piezasM2: 12.5, precioUnitario: 12.0, juntaM2: 0.014 },
+    tabicon: { nombre: 'Tabicón 14×14×28', piezasM2: 25.0, precioUnitario: 5.8, juntaM2: 0.008 },
+  };
+  const aplanados = {
+    mortero: { nombre: 'Mortero 1:4 (2 caras)', morteroM3xM2: 0.025, precioMorteroM3: 1200, moM2: 85 },
+    yeso:    { nombre: 'Yeso prefabricado (2 caras)', morteroM3xM2: 0, precioMorteroM3: 0, moM2: 70, sacoM2: 1.8, precioSaco: 180 },
+    ninguno: { nombre: 'Sin aplanado', morteroM3xM2: 0, precioMorteroM3: 0, moM2: 0 },
+  };
+  const moBlock = { nombre: 'Pegado de block (oficial + ayudante)', tarifaM2: 120 };
+  const cementoKgM3 = 350;
+  const arenaTonM3 = 1.8;
+  const precioCemento50kg = 220;
+  const precioArenaM3 = 380;
+
+  let tab = 'mat';
+
+  function fmt(n, dec=2) {
+    return Number(n).toLocaleString('es-MX', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+  }
+
+  function calc() {
+    const L = parseFloat(document.getElementById('largo').value) || 5.20;
+    const H = parseFloat(document.getElementById('alto').value) || 2.75;
+    const tb = document.getElementById('tipoBlock').value;
+    const ta = document.getElementById('tipoAplanado').value;
+
+    const m2 = L * H;
+    const blk = bloques[tb];
+    const apl = aplanados[ta];
+
+    const piezas = Math.ceil(m2 * blk.piezasM2 * 1.05);
+    const costoPiezas = piezas * blk.precioUnitario;
+
+    const morteroJuntaM3 = m2 * blk.juntaM2;
+    const cementoJuntaKg = morteroJuntaM3 * cementoKgM3;
+    const arenaJuntaTon = morteroJuntaM3 * arenaTonM3;
+    const costoCementoJunta = (cementoJuntaKg / 50) * precioCemento50kg;
+    const costoArenaJunta = arenaJuntaTon * precioArenaM3;
+
+    let costoAplMat = 0;
+    let aplDesc = '';
+    if (ta === 'mortero') {
+      const aplM3 = m2 * apl.morteroM3xM2 * 2;
+      const cementoAplKg = aplM3 * cementoKgM3;
+      const arenaAplTon = aplM3 * arenaTonM3;
+      costoAplMat = (cementoAplKg / 50) * precioCemento50kg + arenaAplTon * precioArenaM3;
+      aplDesc = `${fmt(aplM3,3)} m³ mortero`;
+    } else if (ta === 'yeso') {
+      const sacos = Math.ceil(m2 * apl.sacoM2 * 2 * 1.05);
+      costoAplMat = sacos * apl.precioSaco;
+      aplDesc = `${sacos} sacos yeso`;
+    }
+
+    const moBlkCosto = m2 * moBlock.tarifaM2;
+    const moAplCosto = m2 * apl.moM2;
+    const totalMO = moBlkCosto + moAplCosto;
+    const totalMat = costoPiezas + costoCementoJunta + costoArenaJunta + costoAplMat;
+    const total = totalMat + totalMO;
+    const m2cost = total / m2;
+
+    return { m2, piezas, costoPiezas, cementoJuntaKg, arenaJuntaTon, costoCementoJunta, costoArenaJunta,
+             costoAplMat, aplDesc, moBlkCosto, moAplCosto, totalMO, totalMat, total, m2cost, blk, apl, ta, L, H };
+  }
+
+  function renderMetrics(d) {
+    document.getElementById('metricCards').innerHTML = `
+      <div class="bg-blue-50 rounded-xl p-4 sm:p-5 border border-blue-100">
+        <div class="text-xs text-blue-600 font-medium mb-1">Superficie</div>
+        <div class="text-2xl font-semibold text-blue-900">${fmt(d.m2,2)} <span class="text-sm font-normal text-blue-700">m²</span></div>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
+        <div class="text-xs text-gray-500 font-medium mb-1">Total materiales</div>
+        <div class="text-2xl font-semibold text-gray-900">$${fmt(d.totalMat,0)} <span class="text-sm font-normal text-gray-500">MXN</span></div>
+      </div>
+      <div class="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
+        <div class="text-xs text-gray-500 font-medium mb-1">Costo / m²</div>
+        <div class="text-2xl font-semibold text-gray-900">$${fmt(d.m2cost,0)} <span class="text-sm font-normal text-gray-500">MXN/m²</span></div>
+      </div>
+    `;
+  }
+
+  function renderMat(d) {
+    document.getElementById('panelMat').innerHTML = `
+      <table class="w-full text-sm text-left whitespace-nowrap">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3 font-medium">Concepto</th>
+            <th class="px-4 py-3 font-medium">Tipo</th>
+            <th class="px-4 py-3 font-medium text-right">Cantidad</th>
+            <th class="px-4 py-3 font-medium text-right">P.U.</th>
+            <th class="px-4 py-3 font-medium text-right">Importe</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900">${d.blk.nombre}</td>
+            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
+            <td class="px-4 py-3 text-right tabular-nums">${d.piezas} pzas</td>
+            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(d.blk.precioUnitario,2)}</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoPiezas,2)}</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900">Cemento (junta)</td>
+            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
+            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.cementoJuntaKg,1)} kg</td>
+            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(precioCemento50kg/50,2)}/kg</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoCementoJunta,2)}</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900">Arena (junta)</td>
+            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
+            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.arenaJuntaTon,3)} ton</td>
+            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(precioArenaM3,2)}/m³</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoArenaJunta,2)}</td>
+          </tr>
+          ${d.ta !== 'ninguno' ? `
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900">${d.apl.nombre}</td>
+            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
+            <td class="px-4 py-3 text-right tabular-nums">${d.aplDesc}</td>
+            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">—</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoAplMat,2)}</td>
+          </tr>` : ''}
+          <tr class="bg-gray-50 font-medium">
+            <td colspan="4" class="px-4 py-3 text-right text-gray-900">Total materiales</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">$${fmt(d.totalMat,2)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+  }
+
+  function renderMO(d) {
+    document.getElementById('panelMo').innerHTML = `
+      <table class="w-full text-sm text-left whitespace-nowrap">
+        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3 font-medium">Actividad</th>
+            <th class="px-4 py-3 font-medium">Tipo</th>
+            <th class="px-4 py-3 font-medium text-right">Rendimiento</th>
+            <th class="px-4 py-3 font-medium text-right">Tarifa/m²</th>
+            <th class="px-4 py-3 font-medium text-right">Importe</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900">Pegado de block (oficial + ayudante)</td>
+            <td class="px-4 py-3"><span class="bg-green-100 text-green-800 text-[10px] font-medium px-2 py-1 rounded">m. obra</span></td>
+            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.m2,2)} m²</td>
+            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(moBlock.tarifaM2,2)}</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.moBlkCosto,2)}</td>
+          </tr>
+          ${d.ta !== 'ninguno' ? `
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-gray-900">Aplanado — ${d.apl.nombre}</td>
+            <td class="px-4 py-3"><span class="bg-green-100 text-green-800 text-[10px] font-medium px-2 py-1 rounded">m. obra</span></td>
+            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.m2,2)} m²</td>
+            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(d.apl.moM2,2)}</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.moAplCosto,2)}</td>
+          </tr>` : ''}
+          <tr class="bg-gray-50 font-medium">
+            <td colspan="4" class="px-4 py-3 text-right text-gray-900">Total mano de obra</td>
+            <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">$${fmt(d.totalMO,2)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+  }
+
+  function renderResumen(d) {
+    document.getElementById('panelResumen').innerHTML = `
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Desglose general</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Materiales</span>
+              <span class="text-gray-900 font-medium tabular-nums">$${fmt(d.totalMat,2)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500">Mano de obra</span>
+              <span class="text-gray-900 font-medium tabular-nums">$${fmt(d.totalMO,2)}</span>
+            </div>
+            <div class="pt-3 mt-3 border-t border-gray-200 flex justify-between text-base font-semibold">
+              <span class="text-gray-900">Total</span>
+              <span class="text-gray-900 tabular-nums">$${fmt(d.total,2)} <span class="text-sm font-normal text-gray-500">MXN</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Indicadores clave</h3>
+          <div class="space-y-3 font-medium">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-normal">Superficie</span>
+              <span class="text-gray-900 tabular-nums">${fmt(d.m2,2)} m²</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-normal">Piezas de block</span>
+              <span class="text-gray-900 tabular-nums">${d.piezas} pzas</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-normal">Costo/m² total</span>
+              <span class="text-gray-900 tabular-nums">$${fmt(d.m2cost,2)}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-500 font-normal">% materiales / M.O.</span>
+              <span class="text-gray-900 tabular-nums">${fmt(d.totalMat/d.total*100,1)}% / ${fmt(d.totalMO/d.total*100,1)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function setTab(t, btnElement) {
+    tab = t;
+    // Reset all tabs
+    document.querySelectorAll('.tab-btn').forEach(el => {
+      el.className = "tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent";
+    });
+    
+    // Set active tab styling
+    if (btnElement) {
+      btnElement.className = "tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-blue-50 text-blue-700 border border-blue-200";
+    }
+
+    document.getElementById('panelMat').style.display = t === 'mat' ? '' : 'none';
+    document.getElementById('panelMo').style.display = t === 'mo' ? '' : 'none';
+    document.getElementById('panelResumen').style.display = t === 'resumen' ? '' : 'none';
+  }
+
+  function update() {
+    const d = calc();
+    renderMetrics(d);
+    renderMat(d);
+    renderMO(d);
+    renderResumen(d);
+  }
+
+  function exportar() {
+    const d = calc();
+    const txt = `COMPARATIVA DE MURO — ${d.L}m × ${d.H}m = ${fmt(d.m2,2)} m²
+Block: ${d.blk.nombre} | Acabado: ${d.apl.nombre}
+------------------------------------------
+Materiales:    $${fmt(d.totalMat,2)} MXN
+Mano de obra:  $${fmt(d.totalMO,2)} MXN
+TOTAL:         $${fmt(d.total,2)} MXN
+Costo/m²:      $${fmt(d.m2cost,2)} MXN
+(Precios de referencia, sin IVA, zona centro MX abr-2025)`;
+    
+    // Simulate sendPrompt if it exists, otherwise alert
+    if(typeof sendPrompt === 'function') {
+      sendPrompt('Tengo esta comparativa de muro:\n\n' + txt + '\n\n¿Puedes ayudarme a analizar si el costo es competitivo y qué otros conceptos debería agregar al presupuesto?');
+    } else {
+      alert("Texto copiado para exportar:\n\n" + txt);
+    }
+  }
+
+  ['largo','alto','tipoBlock','tipoAplanado'].forEach(id => {
+    document.getElementById(id).addEventListener('input', update);
+    document.getElementById(id).addEventListener('change', update);
+  });
+  
+  // Set initial active tab state without a generic document.querySelector since it runs before rendering
+  setTab('mat', document.querySelectorAll('.tab-btn')[0]);
+  update();
+  </script>
+</body>
+</html>
