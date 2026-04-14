@@ -1,326 +1,680 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizador de Muro — Yazmin</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #F7F5F0;
+  --surface:  #FFFFFF;
+  --border:   #E2DDD6;
+  --border2:  #C8C2B8;
+  --text:     #1A1814;
+  --muted:    #7A756D;
+  --hint:     #ADA89F;
+  --blue:     #1D5FA8;
+  --blue-bg:  #EBF2FC;
+  --blue-bd:  #B8D0EF;
+  --green:    #1A6E44;
+  --green-bg: #E8F5EE;
+  --green-bd: #A8D9BC;
+  --amber:    #8B5E00;
+  --amber-bg: #FDF3DC;
+  --amber-bd: #F0D080;
+  --red:      #C0392B;
+  --red-bg:   #FDECEB;
+  --radius:   10px;
+  --radius-lg:16px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+
+/* ─── LAYOUT ─────────────────────────────── */
+.app{max-width:900px;margin:0 auto;padding:2rem 1.5rem 4rem}
+
+/* ─── TOP HEADER ─────────────────────────── */
+.top-header{margin-bottom:2rem}
+.top-header h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-bottom:4px}
+.top-header p{font-size:13px;color:var(--muted)}
+.badge-folio{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border-radius:4px;background:var(--text);color:#fff;margin-bottom:10px}
+
+/* ─── DIMENSIONES ────────────────────────── */
+.dims-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;margin-bottom:1.5rem}
+.dim-field{display:flex;align-items:center;gap:8px}
+.dim-field label{font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap}
+.dim-field input{width:80px;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:15px;font-family:'DM Mono',monospace;font-weight:500;text-align:center;background:#fff;color:var(--text)}
+.dim-field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-bg)}
+.dim-sep{font-size:18px;color:var(--hint);font-weight:300}
+.dim-result{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end}
+.dim-result .area{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--blue)}
+.dim-result .area-lbl{font-size:11px;color:var(--muted)}
+
+/* ─── STEPPER ────────────────────────────── */
+.stepper{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:1.5rem}
+.step-btn{padding:10px 4px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);cursor:pointer;text-align:center;transition:all .15s;color:var(--muted)}
+.step-btn .sn{display:block;font-family:'DM Mono',monospace;font-size:20px;font-weight:500;line-height:1;margin-bottom:3px}
+.step-btn .sl{font-size:11px;font-weight:500;line-height:1.2}
+.step-btn:hover{border-color:var(--border2);background:var(--bg)}
+.step-btn.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue)}
+.step-btn.done .sn::after{content:'✓';font-size:14px}
+
+/* ─── PANEL ──────────────────────────────── */
+.panel{display:none}
+.panel.active{display:block}
+.panel-intro{margin-bottom:1.25rem}
+.panel-intro h2{font-size:17px;font-weight:600;margin-bottom:3px}
+.panel-intro p{font-size:13px;color:var(--muted)}
+
+/* ─── WALL SVG ───────────────────────────── */
+.wall-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.25rem;overflow:hidden}
+.wall-wrap svg{width:100%;display:block}
+
+/* ─── MATERIAL CARD ──────────────────────── */
+.mat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;overflow:hidden;transition:border-color .15s}
+.mat-card:hover{border-color:var(--border2)}
+.mat-head{display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 14px;cursor:pointer;gap:8px;user-select:none}
+.mat-head-left .name{font-size:14px;font-weight:500;display:flex;align-items:center;gap:7px}
+.mat-head-left .meta{font-size:12px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.mat-head-right{display:flex;align-items:center;gap:10px}
+.mat-imp{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--text)}
+.chev{font-size:11px;color:var(--hint);transition:transform .2s}
+.mat-card.open .chev{transform:rotate(180deg)}
+.mat-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.mat-card.open .mat-body{display:block}
+
+.for-que{background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin:12px 0 10px}
+.for-que .fq-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:3px}
+.for-que .fq-text{font-size:13px;color:var(--text);line-height:1.5}
+
+.fields-row{display:grid;grid-template-columns:90px 120px 1fr;gap:8px;margin-bottom:10px;align-items:end}
+.fields-row label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.fields-row input{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:'DM Mono',monospace;text-align:right;background:#fff;color:var(--text)}
+.fields-row input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-bg)}
+.fields-row input.unit-inp{text-align:left;background:var(--bg);border-style:dashed}
+
+.tip-row{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:var(--radius);padding:8px 12px}
+.tip-row .tp-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--amber);margin-bottom:3px}
+.tip-row .tp-text{font-size:12px;color:var(--text);line-height:1.5}
+
+.del-btn{margin-top:10px;padding:5px 12px;font-size:12px;border:1px solid var(--border2);border-radius:var(--radius);background:#fff;color:var(--red);cursor:pointer}
+.del-btn:hover{background:var(--red-bg);border-color:var(--red)}
+
+/* ─── BADGE ──────────────────────────────── */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.04em}
+.badge-est{background:var(--blue-bg);color:var(--blue)}
+.badge-aca{background:var(--green-bg);color:var(--green)}
+.badge-ref{background:var(--amber-bg);color:var(--amber)}
+.badge-mo{background:#F0EAFA;color:#6B3FAA}
+.badge-extra{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+
+/* ─── ADD BUTTON ─────────────────────────── */
+.btn-add{width:100%;padding:10px;border:1.5px dashed var(--border2);border-radius:var(--radius-lg);background:transparent;color:var(--muted);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;margin-top:4px;transition:all .15s}
+.btn-add:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+
+/* ─── MO CARD ────────────────────────────── */
+.mo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;overflow:hidden}
+.mo-card:hover{border-color:var(--border2)}
+.mo-head{display:grid;grid-template-columns:1fr auto;align-items:center;padding:12px 14px;cursor:pointer;gap:8px;user-select:none}
+.mo-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border)}
+.mo-card.open .mo-body{display:block}
+.mo-card.open .chev{transform:rotate(180deg)}
+.mo-fields{display:grid;grid-template-columns:1fr 90px 120px;gap:8px;margin:12px 0 10px;align-items:end}
+.mo-fields label{display:block;font-size:11px;font-weight:500;color:var(--muted);margin-bottom:4px}
+.mo-fields input{width:100%;padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:'DM Mono',monospace;text-align:right;background:var(--green-bg);color:var(--green)}
+.mo-fields input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+.mo-fields input.act-inp{text-align:left;background:var(--bg);color:var(--text);border-style:dashed}
+.mo-total-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0 0;border-top:1px solid var(--border);margin-top:4px}
+.mo-total-row span{font-size:12px;color:var(--muted)}
+.mo-total-row b{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:var(--green)}
+
+/* ─── RESUMEN ────────────────────────────── */
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.25rem}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px}
+.metric-card .m-lbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:6px}
+.metric-card .m-val{font-family:'DM Mono',monospace;font-size:20px;font-weight:500}
+
+.bar-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1rem}
+.bar-section h3{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-lbl{font-size:13px;color:var(--text);width:130px;flex-shrink:0}
+.bar-track{flex:1;height:12px;background:var(--bg);border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.bar-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bar-fill.mat{background:var(--blue)}
+.bar-fill.mo{background:var(--green)}
+.bar-pct{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);width:38px;text-align:right;flex-shrink:0}
+
+.desglose-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1rem}
+.desglose-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.desglose-row:last-child{border-bottom:none}
+.desglose-row .dr-lbl{color:var(--muted)}
+.desglose-row .dr-val{font-family:'DM Mono',monospace;font-weight:500}
+.desglose-row.total-row{background:var(--text)}
+.desglose-row.total-row .dr-lbl{color:#fff;font-weight:600;font-size:14px}
+.desglose-row.total-row .dr-val{color:#fff;font-size:18px}
+
+.btn-export{width:100%;padding:13px;border:none;border-radius:var(--radius-lg);background:var(--text);color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;letter-spacing:.01em;transition:opacity .15s}
+.btn-export:hover{opacity:.85}
+.btn-export:active{opacity:.7;transform:scale(.99)}
+
+/* ─── NAV BUTTONS ────────────────────────── */
+.nav-row{display:flex;justify-content:space-between;margin-top:1.5rem;gap:10px}
+.btn-nav{padding:10px 22px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s}
+.btn-nav:hover{background:var(--bg)}
+.btn-nav.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-nav.primary:hover{opacity:.88}
+
+@media(max-width:600px){
+  .stepper{grid-template-columns:repeat(5,1fr)}
+  .step-btn .sl{display:none}
+  .metrics-grid{grid-template-columns:1fr 1fr}
+  .dims-bar{gap:8px}
+  .fields-row{grid-template-columns:80px 110px 1fr}
+}
+</style>
 </head>
-<body class="font-sans text-slate-800 bg-gray-50 p-4 sm:p-6 lg:p-8">
-  <div class="max-w-5xl mx-auto bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
-    <h2 class="text-lg sm:text-xl font-medium text-gray-900 mb-1">Comparativa de muro — precios unitarios</h2>
-    <p class="text-sm text-gray-500 mb-6">Ingresa dimensiones del muro y selecciona el tipo de acabado</p>
+<body>
+<div class="app">
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1">Largo (m)</label>
-        <input type="number" id="largo" value="5.20" step="0.01" min="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1">Alto (m)</label>
-        <input type="number" id="alto" value="2.75" step="0.01" min="0.1" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de block</label>
-        <select id="tipoBlock" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          <option value="hueco15">Block hueco 15×20×40 cm</option>
-          <option value="hueco12">Block hueco 12×20×40 cm</option>
-          <option value="solido">Block sólido 15×20×40 cm</option>
-          <option value="tabicon">Tabicón 14×14×28 cm</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de aplanado</label>
-        <select id="tipoAplanado" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-          <option value="mortero">Aplanado mortero (ambas caras)</option>
-          <option value="yeso">Aplanado yeso (ambas caras)</option>
-          <option value="ninguno">Sin aplanado</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8" id="metricCards"></div>
-
-    <div class="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
-      <button class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-blue-50 text-blue-700 border border-blue-200" onclick="setTab('mat', this)">Materiales</button>
-      <button class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent" onclick="setTab('mo', this)">Mano de obra</button>
-      <button class="tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent" onclick="setTab('resumen', this)">Resumen total</button>
-    </div>
-
-    <div id="panelMat" class="overflow-x-auto"></div>
-    <div id="panelMo" class="overflow-x-auto" style="display:none"></div>
-    <div id="panelResumen" style="display:none"></div>
-
-    <p class="text-xs text-gray-400 mt-6">* Precios de referencia zona centro de México (abr 2025). IVA no incluido.</p>
-    <button class="mt-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm" onclick="exportar()">Exportar comparativa como texto ↗</button>
+  <div class="top-header">
+    <div class="badge-folio">YAZ-011 · ABR 14 2025</div>
+    <h1>Cotizador de muro</h1>
+    <p>Sesión 11 · Arquitecta Yazmin · Ingresa dimensiones y precios reales</p>
   </div>
 
-  <script>
-  const bloques = {
-    hueco15: { nombre: 'Block hueco 15×20×40', piezasM2: 12.5, precioUnitario: 9.5, juntaM2: 0.012 },
-    hueco12: { nombre: 'Block hueco 12×20×40', piezasM2: 12.5, precioUnitario: 8.0, juntaM2: 0.010 },
-    solido:  { nombre: 'Block sólido 15×20×40', piezasM2: 12.5, precioUnitario: 12.0, juntaM2: 0.014 },
-    tabicon: { nombre: 'Tabicón 14×14×28', piezasM2: 25.0, precioUnitario: 5.8, juntaM2: 0.008 },
-  };
-  const aplanados = {
-    mortero: { nombre: 'Mortero 1:4 (2 caras)', morteroM3xM2: 0.025, precioMorteroM3: 1200, moM2: 85 },
-    yeso:    { nombre: 'Yeso prefabricado (2 caras)', morteroM3xM2: 0, precioMorteroM3: 0, moM2: 70, sacoM2: 1.8, precioSaco: 180 },
-    ninguno: { nombre: 'Sin aplanado', morteroM3xM2: 0, precioMorteroM3: 0, moM2: 0 },
-  };
-  const moBlock = { nombre: 'Pegado de block (oficial + ayudante)', tarifaM2: 120 };
-  const cementoKgM3 = 350;
-  const arenaTonM3 = 1.8;
-  const precioCemento50kg = 220;
-  const precioArenaM3 = 380;
+  <!-- DIMENSIONES -->
+  <div class="dims-bar">
+    <div class="dim-field">
+      <label>Largo</label>
+      <input type="number" id="d-largo" value="5.20" min="0.1" step="0.01" oninput="updateDims()">
+      <span style="font-size:13px;color:var(--muted)">m</span>
+    </div>
+    <div class="dim-sep">×</div>
+    <div class="dim-field">
+      <label>Alto</label>
+      <input type="number" id="d-alto" value="2.75" min="0.1" step="0.01" oninput="updateDims()">
+      <span style="font-size:13px;color:var(--muted)">m</span>
+    </div>
+    <div class="dim-result">
+      <span class="area" id="area-val">28.00 m²</span>
+      <span class="area-lbl">superficie del muro</span>
+    </div>
+  </div>
 
-  let tab = 'mat';
+  <!-- STEPPER -->
+  <div class="stepper">
+    <button class="step-btn active" id="sbtn-0" onclick="goStep(0)"><span class="sn">1</span><span class="sl">Estructura</span></button>
+    <button class="step-btn" id="sbtn-1" onclick="goStep(1)"><span class="sn">2</span><span class="sl">Acabados</span></button>
+    <button class="step-btn" id="sbtn-2" onclick="goStep(2)"><span class="sn">3</span><span class="sl">Refuerzos</span></button>
+    <button class="step-btn" id="sbtn-3" onclick="goStep(3)"><span class="sn">4</span><span class="sl">Mano obra</span></button>
+    <button class="step-btn" id="sbtn-4" onclick="goStep(4)"><span class="sn">5</span><span class="sl">Resumen</span></button>
+  </div>
 
-  function fmt(n, dec=2) {
-    return Number(n).toLocaleString('es-MX', {minimumFractionDigits: dec, maximumFractionDigits: dec});
-  }
+  <!-- PANEL 0 — ESTRUCTURA -->
+  <div class="panel active" id="panel-0">
+    <div class="panel-intro">
+      <h2>Paso 1 — Estructura del muro</h2>
+      <p>Los materiales que forman el cuerpo del muro. Edita cantidad y precio unitario en cada tarjeta.</p>
+    </div>
+    <div class="wall-wrap">
+      <svg id="svg-estructura" viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="mats-estructura"></div>
+    <button class="btn-add" onclick="addMat('estructura')">+ agregar material de estructura</button>
+    <div class="nav-row"><div></div><button class="btn-nav primary" onclick="goStep(1)">Siguiente: Acabados →</button></div>
+  </div>
 
-  function calc() {
-    const L = parseFloat(document.getElementById('largo').value) || 5.20;
-    const H = parseFloat(document.getElementById('alto').value) || 2.75;
-    const tb = document.getElementById('tipoBlock').value;
-    const ta = document.getElementById('tipoAplanado').value;
+  <!-- PANEL 1 — ACABADOS -->
+  <div class="panel" id="panel-1">
+    <div class="panel-intro">
+      <h2>Paso 2 — Acabados</h2>
+      <p>Masilla y materiales de terminación superficial del muro.</p>
+    </div>
+    <div class="wall-wrap">
+      <svg id="svg-acabados" viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="mats-acabados"></div>
+    <button class="btn-add" onclick="addMat('acabados')">+ agregar material de acabado</button>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="goStep(0)">← Estructura</button>
+      <button class="btn-nav primary" onclick="goStep(2)">Siguiente: Refuerzos →</button>
+    </div>
+  </div>
 
-    const m2 = L * H;
-    const blk = bloques[tb];
-    const apl = aplanados[ta];
+  <!-- PANEL 2 — REFUERZOS -->
+  <div class="panel" id="panel-2">
+    <div class="panel-intro">
+      <h2>Paso 3 — Refuerzos estructurales</h2>
+      <p>Acero y malla que dan resistencia y evitan grietas.</p>
+    </div>
+    <div class="wall-wrap">
+      <svg id="svg-refuerzos" viewBox="0 0 500 180" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="mats-refuerzos"></div>
+    <button class="btn-add" onclick="addMat('refuerzos')">+ agregar refuerzo</button>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="goStep(1)">← Acabados</button>
+      <button class="btn-nav primary" onclick="goStep(3)">Siguiente: Mano de obra →</button>
+    </div>
+  </div>
 
-    const piezas = Math.ceil(m2 * blk.piezasM2 * 1.05);
-    const costoPiezas = piezas * blk.precioUnitario;
+  <!-- PANEL 3 — MANO DE OBRA -->
+  <div class="panel" id="panel-3">
+    <div class="panel-intro">
+      <h2>Paso 4 — Mano de obra</h2>
+      <p>Define actividad, perfil del personal, días trabajados y tarifa por día.</p>
+    </div>
+    <div id="mo-list"></div>
+    <button class="btn-add" onclick="addMO()">+ agregar actividad</button>
+    <div class="nav-row">
+      <button class="btn-nav" onclick="goStep(2)">← Refuerzos</button>
+      <button class="btn-nav primary" onclick="goStep(4)">Ver resumen →</button>
+    </div>
+  </div>
 
-    const morteroJuntaM3 = m2 * blk.juntaM2;
-    const cementoJuntaKg = morteroJuntaM3 * cementoKgM3;
-    const arenaJuntaTon = morteroJuntaM3 * arenaTonM3;
-    const costoCementoJunta = (cementoJuntaKg / 50) * precioCemento50kg;
-    const costoArenaJunta = arenaJuntaTon * precioArenaM3;
+  <!-- PANEL 4 — RESUMEN -->
+  <div class="panel" id="panel-4">
+    <div class="panel-intro">
+      <h2>Paso 5 — Resumen del presupuesto</h2>
+      <p id="resumen-sub">Muro 5.20 × 2.75 m = 28.00 m²</p>
+    </div>
 
-    let costoAplMat = 0;
-    let aplDesc = '';
-    if (ta === 'mortero') {
-      const aplM3 = m2 * apl.morteroM3xM2 * 2;
-      const cementoAplKg = aplM3 * cementoKgM3;
-      const arenaAplTon = aplM3 * arenaTonM3;
-      costoAplMat = (cementoAplKg / 50) * precioCemento50kg + arenaAplTon * precioArenaM3;
-      aplDesc = `${fmt(aplM3,3)} m³ mortero`;
-    } else if (ta === 'yeso') {
-      const sacos = Math.ceil(m2 * apl.sacoM2 * 2 * 1.05);
-      costoAplMat = sacos * apl.precioSaco;
-      aplDesc = `${sacos} sacos yeso`;
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="m-lbl">Total materiales</div>
+        <div class="m-val" id="r-mat" style="color:var(--blue)">$0.00</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-lbl">Total mano de obra</div>
+        <div class="m-val" id="r-mo" style="color:var(--green)">$0.00</div>
+      </div>
+      <div class="metric-card">
+        <div class="m-lbl">Costo por m²</div>
+        <div class="m-val" id="r-m2">$0.00</div>
+      </div>
+    </div>
+
+    <div class="bar-section">
+      <h3>Distribución del presupuesto</h3>
+      <div class="bar-row">
+        <span class="bar-lbl">Materiales</span>
+        <div class="bar-track"><div class="bar-fill mat" id="bar-mat" style="width:0%"></div></div>
+        <span class="bar-pct" id="bv-mat">0%</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-lbl">Mano de obra</span>
+        <div class="bar-track"><div class="bar-fill mo" id="bar-mo" style="width:0%"></div></div>
+        <span class="bar-pct" id="bv-mo">0%</span>
+      </div>
+    </div>
+
+    <div class="desglose-list" id="desglose-list"></div>
+
+    <button class="btn-export" onclick="exportar()">Generar presupuesto formal para cliente</button>
+
+    <div class="nav-row">
+      <button class="btn-nav" onclick="goStep(3)">← Mano de obra</button>
+      <div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const MX = n => '$' + Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+let largo = 5.20, alto = 2.75;
+let openCards = {};
+
+const MATS = {
+  estructura: [
+    {id:'blk', name:'Block 10×20×40 cm', cant:172, pu:8.5, unit:'pzas',
+     para:'Forman el cuerpo del muro. Dimensión estándar mexicana. Para 28 m² se necesitan ~166 piezas netas.',
+     tip:'Pide siempre un 5% extra por roturas y cortes. Compra bloques del mismo lote para color uniforme.'},
+    {id:'cem', name:'Cemento Portland', cant:7, pu:220, unit:'sacos 50 kg',
+     para:'Ligante principal. Se usa para la junta entre blocks (mortero 1:4) y para la base del muro.',
+     tip:'Un saco cubre aprox. 4 m² de junta. Cierra el saco hermético si no usas todo para evitar que fragüe.'},
+    {id:'pol', name:'Arena / polvo de piedra', cant:1, pu:380, unit:'m³',
+     para:'Se mezcla con cemento en proporción 1:4 para obtener el mortero de junta.',
+     tip:'El polvo de piedra da mejor textura y adherencia que la arena gruesa para junta de block fino.'},
+    {id:'gra', name:'Grava', cant:5, pu:95, unit:'sacos',
+     para:'Para preparación de la cimentación y base del muro donde contacta con el piso.',
+     tip:'Usa grava limpia sin arcilla. La arcilla retiene humedad y puede causar eflorescencias.'},
+  ],
+  acabados: [
+    {id:'mas', name:'Masilla fibratada 40 kg', cant:4, pu:340, unit:'bultos',
+     para:'Acabado superficial del muro. 1 bulto de 40 kg cubre ~10 m². Para 28 m² = 2.8 bultos netos + merma.',
+     tip:'Aplica en 2 capas delgadas. La masilla fibratada resiste mejor fisuras por asentamiento que la simple.'},
+  ],
+  refuerzos: [
+    {id:'arm', name:'Malla electrosoldada Armex 10×10', cant:1, pu:850, unit:'lámina',
+     para:'Refuerzo horizontal que distribuye cargas y evita grietas por asentamiento o cambios térmicos.',
+     tip:'Coloca la malla cada 3 hiladas de block. Traslapa mínimo 20 cm en uniones para continuidad estructural.'},
+    {id:'var', name:'Varilla 3/8" (castillos)', cant:1, pu:185, unit:'varilla 6 m',
+     para:'Refuerzo vertical en castillos. Trabaja junto con la malla para dar rigidez al muro ante cargas laterales.',
+     tip:'Los castillos van en esquinas y cada 3 m de longitud de muro. Dobla 40 cm en base y en tapa.'},
+  ],
+};
+
+const MO_INIT = [
+  {id:'alb', act:'Pegado de block y junta', personal:'Albañil', dias:5, tarifa:600,
+   tip:'Rendimiento promedio de un albañil: 8–10 m² por día en muro de block. Verifica con el contratista local.'},
+  {id:'ayu', act:'Auxiliar general', personal:'Ayudante', dias:5, tarifa:350,
+   tip:'El ayudante mezcla, surte material y limpia el área. Indispensable para mantener el ritmo de trabajo.'},
+];
+
+let matsData = JSON.parse(JSON.stringify(MATS));
+let moData   = JSON.parse(JSON.stringify(MO_INIT));
+let currentStep = 0;
+
+function updateDims(){
+  largo = parseFloat($('d-largo').value) || 5.20;
+  alto  = parseFloat($('d-alto').value)  || 2.75;
+  const area = largo * alto;
+  $('area-val').textContent = area.toFixed(2) + ' m²';
+  drawSVGs();
+  if(currentStep === 4) updateResumen();
+}
+
+function goStep(i){
+  currentStep = i;
+  document.querySelectorAll('.step-btn').forEach((b,j) => b.classList.toggle('active', i===j));
+  document.querySelectorAll('.panel').forEach((p,j) => p.classList.toggle('active', i===j));
+  if(i===4) updateResumen();
+}
+
+// ─── SVG DRAWINGS ────────────────────────────────────────────
+function drawSVGs(){
+  drawEstructura();
+  drawAcabados();
+  drawRefuerzos();
+}
+
+function drawEstructura(){
+  const sw=500, sh=180, px=30, py=30, pw=sw-px*2-20, ph=sh-py-20;
+  const cols=Math.max(4, Math.round(largo*2));
+  const rows=Math.max(3, Math.round(alto*2));
+  const bw=pw/cols, bh=ph/rows;
+  let svg=``;
+  svg+=`<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="3" fill="#EBF2FC" stroke="#1D5FA8" stroke-width="1.5"/>`;
+  for(let r=0;r<rows;r++){
+    const offset = r%2===1 ? bw/2 : 0;
+    for(let c=-1;c<cols+1;c++){
+      const x=px+c*bw+offset, y=py+r*bh;
+      const rw=Math.min(bw-3, pw-(x-px));
+      if(rw<6) continue;
+      svg+=`<rect x="${(x+1.5).toFixed(1)}" y="${(y+1.5).toFixed(1)}" width="${(rw-0).toFixed(1)}" height="${(bh-3).toFixed(1)}" rx="2" fill="#B8D0EF" stroke="#1D5FA8" stroke-width="0.8"/>`;
     }
-
-    const moBlkCosto = m2 * moBlock.tarifaM2;
-    const moAplCosto = m2 * apl.moM2;
-    const totalMO = moBlkCosto + moAplCosto;
-    const totalMat = costoPiezas + costoCementoJunta + costoArenaJunta + costoAplMat;
-    const total = totalMat + totalMO;
-    const m2cost = total / m2;
-
-    return { m2, piezas, costoPiezas, cementoJuntaKg, arenaJuntaTon, costoCementoJunta, costoArenaJunta,
-             costoAplMat, aplDesc, moBlkCosto, moAplCosto, totalMO, totalMat, total, m2cost, blk, apl, ta, L, H };
   }
+  svg+=`<line x1="${px}" y1="${py-10}" x2="${px+pw}" y2="${py-10}" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<line x1="${px}" y1="${py-14}" x2="${px}" y2="${py-6}" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<line x1="${px+pw}" y1="${py-14}" x2="${px+pw}" y2="${py-6}" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<text x="${(px+pw/2).toFixed(0)}" y="${py-13}" text-anchor="middle" font-size="11" fill="#1D5FA8" font-family="DM Mono,monospace">${largo.toFixed(2)} m</text>`;
+  svg+=`<line x1="${px+pw+12}" y1="${py}" x2="${px+pw+12}" y2="${py+ph}" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<line x1="${px+pw+8}" y1="${py}" x2="${px+pw+16}" y2="${py}" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<line x1="${px+pw+8}" y1="${py+ph}" x2="${px+pw+16}" y2="${py+ph}" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<text x="${px+pw+20}" y="${(py+ph/2+4).toFixed(0)}" font-size="11" fill="#1D5FA8" font-family="DM Mono,monospace">${alto.toFixed(2)} m</text>`;
+  svg+=`<text x="${(px+pw/2).toFixed(0)}" y="${py+ph+16}" text-anchor="middle" font-size="10" fill="#7A756D" font-family="DM Sans,sans-serif">Block ${largo.toFixed(2)}m × ${alto.toFixed(2)}m · junta mortero</text>`;
+  $('svg-estructura').innerHTML = svg;
+}
 
-  function renderMetrics(d) {
-    document.getElementById('metricCards').innerHTML = `
-      <div class="bg-blue-50 rounded-xl p-4 sm:p-5 border border-blue-100">
-        <div class="text-xs text-blue-600 font-medium mb-1">Superficie</div>
-        <div class="text-2xl font-semibold text-blue-900">${fmt(d.m2,2)} <span class="text-sm font-normal text-blue-700">m²</span></div>
+function drawAcabados(){
+  const sw=500,sh=180,px=30,py=30,pw=sw-px*2-20,ph=sh-py-20;
+  let svg='';
+  svg+=`<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="3" fill="#B8D0EF" stroke="#1D5FA8" stroke-width="1"/>`;
+  svg+=`<rect x="${px}" y="${py}" width="${pw}" height="16" rx="3" fill="#A8D9BC" stroke="#1A6E44" stroke-width="1.2"/>`;
+  svg+=`<rect x="${px}" y="${py+ph-16}" width="${pw}" height="16" rx="3" fill="#A8D9BC" stroke="#1A6E44" stroke-width="1.2"/>`;
+  svg+=`<rect x="${px}" y="${py}" width="16" height="${ph}" rx="3" fill="#A8D9BC" stroke="#1A6E44" stroke-width="1.2"/>`;
+  svg+=`<rect x="${px+pw-16}" y="${py}" width="16" height="${ph}" rx="3" fill="#A8D9BC" stroke="#1A6E44" stroke-width="1.2"/>`;
+  svg+=`<text x="${(px+pw/2).toFixed(0)}" y="${(py+ph/2+4).toFixed(0)}" text-anchor="middle" font-size="11" fill="#1D5FA8" font-family="DM Sans,sans-serif">Muro de block</text>`;
+  svg+=`<text x="${(px+pw/2).toFixed(0)}" y="${py+ph+16}" text-anchor="middle" font-size="10" fill="#7A756D" font-family="DM Sans,sans-serif">Masilla fibratada — capa uniforme sobre ${(largo*alto).toFixed(2)} m²</text>`;
+  $('svg-acabados').innerHTML = svg;
+}
+
+function drawRefuerzos(){
+  const sw=500,sh=180,px=30,py=30,pw=sw-px*2-20,ph=sh-py-20;
+  let svg='';
+  svg+=`<rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="3" fill="#EBF2FC" stroke="#1D5FA8" stroke-width="1"/>`;
+  const cols=Math.max(3,Math.round(largo*1.5));
+  for(let c=1;c<cols;c++){
+    const x=px+c*(pw/cols);
+    svg+=`<line x1="${x.toFixed(1)}" y1="${py}" x2="${x.toFixed(1)}" y2="${py+ph}" stroke="#8B5E00" stroke-width="2.5"/>`;
+  }
+  const hrows=Math.max(2,Math.round(alto*1.8));
+  for(let r=1;r<hrows;r++){
+    const y=py+r*(ph/hrows);
+    svg+=`<line x1="${px}" y1="${y.toFixed(1)}" x2="${px+pw}" y2="${y.toFixed(1)}" stroke="#BA7517" stroke-width="1.8" stroke-dasharray="6,4"/>`;
+  }
+  svg+=`<text x="${(px+20).toFixed(0)}" y="${py+ph+16}" font-size="10" fill="#8B5E00" font-family="DM Sans,sans-serif">Varilla 3/8" (castillos verticales)</text>`;
+  svg+=`<text x="${(px+pw-10).toFixed(0)}" y="${py+ph+16}" text-anchor="end" font-size="10" fill="#BA7517" font-family="DM Sans,sans-serif">Armex 10×10 (horizontal)</text>`;
+  $('svg-refuerzos').innerHTML = svg;
+}
+
+// ─── RENDER MATERIALS ─────────────────────────────────────────
+function renderMats(sec){
+  const cont = $('mats-'+sec);
+  cont.innerHTML = '';
+  matsData[sec].forEach((m,idx) => {
+    const imp = (m.cant||0)*(m.pu||0);
+    const div = document.createElement('div');
+    div.className = 'mat-card' + (openCards[sec+idx] ? ' open' : '');
+    div.id = 'mc-'+sec+'-'+idx;
+    const badgeClass = {estructura:'badge-est',acabados:'badge-aca',refuerzos:'badge-ref'}[sec] || 'badge-extra';
+    div.innerHTML = `
+      <div class="mat-head" onclick="toggleMat('${sec}',${idx})">
+        <div class="mat-head-left">
+          <div class="name">${m.name}<span class="badge ${badgeClass}">${sec}</span></div>
+          <div class="meta" id="meta-${sec}-${idx}">${m.cant} ${m.unit} × $${Number(m.pu).toFixed(2)}</div>
+        </div>
+        <div class="mat-head-right">
+          <span class="mat-imp" id="imp-${sec}-${idx}">${MX(imp)}</span>
+          <span class="chev">▼</span>
+        </div>
       </div>
-      <div class="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
-        <div class="text-xs text-gray-500 font-medium mb-1">Total materiales</div>
-        <div class="text-2xl font-semibold text-gray-900">$${fmt(d.totalMat,0)} <span class="text-sm font-normal text-gray-500">MXN</span></div>
-      </div>
-      <div class="bg-gray-50 rounded-xl p-4 sm:p-5 border border-gray-200">
-        <div class="text-xs text-gray-500 font-medium mb-1">Costo / m²</div>
-        <div class="text-2xl font-semibold text-gray-900">$${fmt(d.m2cost,0)} <span class="text-sm font-normal text-gray-500">MXN/m²</span></div>
-      </div>
-    `;
-  }
-
-  function renderMat(d) {
-    document.getElementById('panelMat').innerHTML = `
-      <table class="w-full text-sm text-left whitespace-nowrap">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th class="px-4 py-3 font-medium">Concepto</th>
-            <th class="px-4 py-3 font-medium">Tipo</th>
-            <th class="px-4 py-3 font-medium text-right">Cantidad</th>
-            <th class="px-4 py-3 font-medium text-right">P.U.</th>
-            <th class="px-4 py-3 font-medium text-right">Importe</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-900">${d.blk.nombre}</td>
-            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
-            <td class="px-4 py-3 text-right tabular-nums">${d.piezas} pzas</td>
-            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(d.blk.precioUnitario,2)}</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoPiezas,2)}</td>
-          </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-900">Cemento (junta)</td>
-            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
-            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.cementoJuntaKg,1)} kg</td>
-            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(precioCemento50kg/50,2)}/kg</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoCementoJunta,2)}</td>
-          </tr>
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-900">Arena (junta)</td>
-            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
-            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.arenaJuntaTon,3)} ton</td>
-            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(precioArenaM3,2)}/m³</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoArenaJunta,2)}</td>
-          </tr>
-          ${d.ta !== 'ninguno' ? `
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-900">${d.apl.nombre}</td>
-            <td class="px-4 py-3"><span class="bg-blue-100 text-blue-800 text-[10px] font-medium px-2 py-1 rounded">material</span></td>
-            <td class="px-4 py-3 text-right tabular-nums">${d.aplDesc}</td>
-            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">—</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.costoAplMat,2)}</td>
-          </tr>` : ''}
-          <tr class="bg-gray-50 font-medium">
-            <td colspan="4" class="px-4 py-3 text-right text-gray-900">Total materiales</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">$${fmt(d.totalMat,2)}</td>
-          </tr>
-        </tbody>
-      </table>`;
-  }
-
-  function renderMO(d) {
-    document.getElementById('panelMo').innerHTML = `
-      <table class="w-full text-sm text-left whitespace-nowrap">
-        <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200">
-          <tr>
-            <th class="px-4 py-3 font-medium">Actividad</th>
-            <th class="px-4 py-3 font-medium">Tipo</th>
-            <th class="px-4 py-3 font-medium text-right">Rendimiento</th>
-            <th class="px-4 py-3 font-medium text-right">Tarifa/m²</th>
-            <th class="px-4 py-3 font-medium text-right">Importe</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-200">
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-900">Pegado de block (oficial + ayudante)</td>
-            <td class="px-4 py-3"><span class="bg-green-100 text-green-800 text-[10px] font-medium px-2 py-1 rounded">m. obra</span></td>
-            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.m2,2)} m²</td>
-            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(moBlock.tarifaM2,2)}</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.moBlkCosto,2)}</td>
-          </tr>
-          ${d.ta !== 'ninguno' ? `
-          <tr class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-gray-900">Aplanado — ${d.apl.nombre}</td>
-            <td class="px-4 py-3"><span class="bg-green-100 text-green-800 text-[10px] font-medium px-2 py-1 rounded">m. obra</span></td>
-            <td class="px-4 py-3 text-right tabular-nums">${fmt(d.m2,2)} m²</td>
-            <td class="px-4 py-3 text-right text-gray-500 tabular-nums">$${fmt(d.apl.moM2,2)}</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums">$${fmt(d.moAplCosto,2)}</td>
-          </tr>` : ''}
-          <tr class="bg-gray-50 font-medium">
-            <td colspan="4" class="px-4 py-3 text-right text-gray-900">Total mano de obra</td>
-            <td class="px-4 py-3 text-right text-gray-900 tabular-nums font-semibold">$${fmt(d.totalMO,2)}</td>
-          </tr>
-        </tbody>
-      </table>`;
-  }
-
-  function renderResumen(d) {
-    document.getElementById('panelResumen').innerHTML = `
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Desglose general</h3>
-          <div class="space-y-3">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Materiales</span>
-              <span class="text-gray-900 font-medium tabular-nums">$${fmt(d.totalMat,2)}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500">Mano de obra</span>
-              <span class="text-gray-900 font-medium tabular-nums">$${fmt(d.totalMO,2)}</span>
-            </div>
-            <div class="pt-3 mt-3 border-t border-gray-200 flex justify-between text-base font-semibold">
-              <span class="text-gray-900">Total</span>
-              <span class="text-gray-900 tabular-nums">$${fmt(d.total,2)} <span class="text-sm font-normal text-gray-500">MXN</span></span>
-            </div>
+      <div class="mat-body">
+        <div class="for-que">
+          <div class="fq-label">Para qué sirve</div>
+          <div class="fq-text">${m.para}</div>
+        </div>
+        <div class="fields-row">
+          <div>
+            <label>Cantidad</label>
+            <input type="number" id="cant-${sec}-${idx}" value="${m.cant}" min="0" step="1" oninput="updateMat('${sec}',${idx})">
+          </div>
+          <div>
+            <label>Precio unitario ($)</label>
+            <input type="number" id="pu-${sec}-${idx}" value="${m.pu}" min="0" step="1" oninput="updateMat('${sec}',${idx})">
+          </div>
+          <div>
+            <label>Unidad</label>
+            <input type="text" id="unit-${sec}-${idx}" value="${m.unit}" class="unit-inp" oninput="updateMatUnit('${sec}',${idx})">
           </div>
         </div>
-        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 class="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Indicadores clave</h3>
-          <div class="space-y-3 font-medium">
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 font-normal">Superficie</span>
-              <span class="text-gray-900 tabular-nums">${fmt(d.m2,2)} m²</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 font-normal">Piezas de block</span>
-              <span class="text-gray-900 tabular-nums">${d.piezas} pzas</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 font-normal">Costo/m² total</span>
-              <span class="text-gray-900 tabular-nums">$${fmt(d.m2cost,2)}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-gray-500 font-normal">% materiales / M.O.</span>
-              <span class="text-gray-900 tabular-nums">${fmt(d.totalMat/d.total*100,1)}% / ${fmt(d.totalMO/d.total*100,1)}%</span>
-            </div>
-          </div>
+        <div class="tip-row">
+          <div class="tp-label">Tip profesional</div>
+          <div class="tp-text">${m.tip}</div>
         </div>
+        ${m.added ? `<button class="del-btn" onclick="delMat('${sec}',${idx})">Eliminar este material</button>` : ''}
       </div>`;
-  }
-
-  function setTab(t, btnElement) {
-    tab = t;
-    // Reset all tabs
-    document.querySelectorAll('.tab-btn').forEach(el => {
-      el.className = "tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-white text-gray-500 hover:text-gray-700 hover:bg-gray-50 border border-transparent";
-    });
-    
-    // Set active tab styling
-    if (btnElement) {
-      btnElement.className = "tab-btn px-4 py-2 text-sm font-medium rounded-lg transition-colors bg-blue-50 text-blue-700 border border-blue-200";
-    }
-
-    document.getElementById('panelMat').style.display = t === 'mat' ? '' : 'none';
-    document.getElementById('panelMo').style.display = t === 'mo' ? '' : 'none';
-    document.getElementById('panelResumen').style.display = t === 'resumen' ? '' : 'none';
-  }
-
-  function update() {
-    const d = calc();
-    renderMetrics(d);
-    renderMat(d);
-    renderMO(d);
-    renderResumen(d);
-  }
-
-  function exportar() {
-    const d = calc();
-    const txt = `COMPARATIVA DE MURO — ${d.L}m × ${d.H}m = ${fmt(d.m2,2)} m²
-Block: ${d.blk.nombre} | Acabado: ${d.apl.nombre}
-------------------------------------------
-Materiales:    $${fmt(d.totalMat,2)} MXN
-Mano de obra:  $${fmt(d.totalMO,2)} MXN
-TOTAL:         $${fmt(d.total,2)} MXN
-Costo/m²:      $${fmt(d.m2cost,2)} MXN
-(Precios de referencia, sin IVA, zona centro MX abr-2025)`;
-    
-    // Simulate sendPrompt if it exists, otherwise alert
-    if(typeof sendPrompt === 'function') {
-      sendPrompt('Tengo esta comparativa de muro:\n\n' + txt + '\n\n¿Puedes ayudarme a analizar si el costo es competitivo y qué otros conceptos debería agregar al presupuesto?');
-    } else {
-      alert("Texto copiado para exportar:\n\n" + txt);
-    }
-  }
-
-  ['largo','alto','tipoBlock','tipoAplanado'].forEach(id => {
-    document.getElementById(id).addEventListener('input', update);
-    document.getElementById(id).addEventListener('change', update);
+    cont.appendChild(div);
   });
-  
-  // Set initial active tab state without a generic document.querySelector since it runs before rendering
-  setTab('mat', document.querySelectorAll('.tab-btn')[0]);
-  update();
-  </script>
+}
+
+function toggleMat(sec,idx){
+  const key = sec+idx;
+  openCards[key] = !openCards[key];
+  const card = $('mc-'+sec+'-'+idx);
+  if(card) card.classList.toggle('open', openCards[key]);
+}
+
+function updateMat(sec,idx){
+  const c = parseFloat($(`cant-${sec}-${idx}`).value)||0;
+  const p = parseFloat($(`pu-${sec}-${idx}`).value)||0;
+  matsData[sec][idx].cant = c;
+  matsData[sec][idx].pu   = p;
+  const imp = c*p;
+  $(`imp-${sec}-${idx}`).textContent  = MX(imp);
+  $(`meta-${sec}-${idx}`).textContent = `${c} ${matsData[sec][idx].unit} × $${p.toFixed(2)}`;
+}
+function updateMatUnit(sec,idx){
+  matsData[sec][idx].unit = $(`unit-${sec}-${idx}`).value;
+}
+function addMat(sec){
+  const name = prompt('Nombre del material:', '');
+  if(!name) return;
+  matsData[sec].push({id:'add'+Date.now(), name, cant:1, pu:0, unit:'pzas',
+    para:'Material agregado. Describe aquí para qué sirve.',
+    tip:'Verifica precio con tu proveedor local antes de incluir en el presupuesto final.',
+    added:true});
+  renderMats(sec);
+}
+function delMat(sec,idx){ matsData[sec].splice(idx,1); renderMats(sec); }
+
+// ─── RENDER MO ────────────────────────────────────────────────
+function renderMO(){
+  const cont = $('mo-list');
+  cont.innerHTML = '';
+  moData.forEach((m,idx) => {
+    const imp = (m.dias||0)*(m.tarifa||0);
+    const div = document.createElement('div');
+    div.className = 'mo-card' + (openCards['mo'+idx] ? ' open' : '');
+    div.id = 'moc-'+idx;
+    div.innerHTML = `
+      <div class="mo-head" onclick="toggleMO(${idx})">
+        <div class="mat-head-left">
+          <div class="name">${m.act}<span class="badge badge-mo">MO</span></div>
+          <div class="meta" id="mo-meta-${idx}">${m.personal} · ${m.dias} días × $${Number(m.tarifa).toFixed(2)}/día</div>
+        </div>
+        <div class="mat-head-right">
+          <span class="mat-imp" id="mo-imp-${idx}">${MX(imp)}</span>
+          <span class="chev">▼</span>
+        </div>
+      </div>
+      <div class="mo-body">
+        <div class="mo-fields" style="margin-top:12px">
+          <div>
+            <label>Actividad</label>
+            <input type="text" id="mo-act-${idx}" value="${m.act}" class="act-inp" oninput="updateMO(${idx})">
+          </div>
+          <div>
+            <label>Días</label>
+            <input type="number" id="mo-dias-${idx}" value="${m.dias}" min="1" step="1" oninput="updateMO(${idx})">
+          </div>
+          <div>
+            <label>Tarifa / día ($)</label>
+            <input type="number" id="mo-tar-${idx}" value="${m.tarifa}" min="0" step="50" oninput="updateMO(${idx})">
+          </div>
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-size:11px;font-weight:500;color:var(--muted);display:block;margin-bottom:4px">Perfil / personal</label>
+          <input type="text" id="mo-per-${idx}" value="${m.personal}" style="width:100%;padding:7px 10px;border:1px dashed var(--border2);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text)" oninput="updateMO(${idx})">
+        </div>
+        <div class="mo-total-row">
+          <span>Total esta actividad</span>
+          <b id="mo-tot-${idx}">${MX(imp)}</b>
+        </div>
+        <div class="tip-row" style="margin-top:10px">
+          <div class="tp-label">Tip</div>
+          <div class="tp-text">${m.tip}</div>
+        </div>
+        ${m.added ? `<button class="del-btn" onclick="delMO(${idx})">Eliminar actividad</button>` : ''}
+      </div>`;
+    cont.appendChild(div);
+  });
+}
+
+function toggleMO(idx){
+  const key = 'mo'+idx;
+  openCards[key] = !openCards[key];
+  const card = $('moc-'+idx);
+  if(card) card.classList.toggle('open', openCards[key]);
+}
+function updateMO(idx){
+  const d = parseInt($(`mo-dias-${idx}`).value)||0;
+  const t = parseFloat($(`mo-tar-${idx}`).value)||0;
+  moData[idx].act      = $(`mo-act-${idx}`).value;
+  moData[idx].personal = $(`mo-per-${idx}`).value;
+  moData[idx].dias     = d;
+  moData[idx].tarifa   = t;
+  const imp = d*t;
+  $(`mo-imp-${idx}`).textContent  = MX(imp);
+  $(`mo-tot-${idx}`).textContent  = MX(imp);
+  $(`mo-meta-${idx}`).textContent = `${moData[idx].personal} · ${d} días × $${t.toFixed(2)}/día`;
+}
+function addMO(){
+  moData.push({id:'mo'+Date.now(), act:'Nueva actividad', personal:'Personal', dias:1, tarifa:0,
+    tip:'Define la actividad específica y el perfil del trabajador requerido.', added:true});
+  renderMO();
+}
+function delMO(idx){ moData.splice(idx,1); renderMO(); }
+
+// ─── TOTALS ───────────────────────────────────────────────────
+function totalMat(){
+  let t=0;
+  Object.values(matsData).forEach(arr => arr.forEach(m => { t += (m.cant||0)*(m.pu||0); }));
+  return t;
+}
+function totalMO(){ let t=0; moData.forEach(m=>{ t+=(m.dias||0)*(m.tarifa||0); }); return t; }
+
+function updateResumen(){
+  const area = largo*alto;
+  const tm=totalMat(), tmo=totalMO(), grand=tm+tmo;
+  $('resumen-sub').textContent = `Muro ${largo.toFixed(2)} × ${alto.toFixed(2)} m = ${area.toFixed(2)} m²`;
+  $('r-mat').textContent = MX(tm);
+  $('r-mo').textContent  = MX(tmo);
+  $('r-m2').textContent  = grand>0 ? MX(grand/area) : '$0.00';
+  $('r-grand') && ($('r-grand').textContent = MX(grand));
+  const pmat = grand>0 ? tm/grand*100 : 0;
+  const pmo  = grand>0 ? tmo/grand*100 : 0;
+  $('bar-mat').style.width = pmat.toFixed(1)+'%';
+  $('bar-mo').style.width  = pmo.toFixed(1)+'%';
+  $('bv-mat').textContent  = pmat.toFixed(1)+'%';
+  $('bv-mo').textContent   = pmo.toFixed(1)+'%';
+
+  const names = {estructura:'Estructura',acabados:'Acabados',refuerzos:'Refuerzos'};
+  let rows = '';
+  Object.entries(matsData).forEach(([sec,arr])=>{
+    let st=0; arr.forEach(m=>{ st+=(m.cant||0)*(m.pu||0); });
+    if(st>0) rows+=`<div class="desglose-row"><span class="dr-lbl">${names[sec]}</span><span class="dr-val">${MX(st)}</span></div>`;
+  });
+  rows+=`<div class="desglose-row"><span class="dr-lbl">Mano de obra</span><span class="dr-val">${MX(tmo)}</span></div>`;
+  rows+=`<div class="desglose-row total-row"><span class="dr-lbl">Gran total (sin IVA)</span><span class="dr-val">${MX(grand)}</span></div>`;
+  $('desglose-list').innerHTML = rows;
+}
+
+function exportar(){
+  const area = largo*alto;
+  const tm=totalMat(), tmo=totalMO(), grand=tm+tmo;
+  let lines=[`COTIZACIÓN YAZMIN — Ses. 11`,`${largo.toFixed(2)} m × ${alto.toFixed(2)} m = ${area.toFixed(2)} m²`,``];
+  Object.entries(matsData).forEach(([sec,arr])=>{
+    lines.push(sec.toUpperCase()+':');
+    arr.forEach(m=>{
+      const imp=(m.cant||0)*(m.pu||0);
+      lines.push(`  ${m.name} (${m.cant} ${m.unit}) × $${m.pu} = $${imp.toFixed(2)}`);
+    });
+    lines.push('');
+  });
+  lines.push('MANO DE OBRA:');
+  moData.forEach(m=>{
+    const imp=(m.dias||0)*(m.tarifa||0);
+    lines.push(`  ${m.act} — ${m.personal} · ${m.dias} días × $${m.tarifa}/día = $${imp.toFixed(2)}`);
+  });
+  lines.push(`\nTotal materiales:   $${tm.toFixed(2)}`);
+  lines.push(`Total mano de obra: $${tmo.toFixed(2)}`);
+  lines.push(`GRAN TOTAL:         $${grand.toFixed(2)} MXN`);
+  lines.push(`Costo/m²:           $${(grand/area).toFixed(2)} MXN`);
+  alert('Cotización copiada. Pega en WhatsApp o correo:\n\n'+lines.join('\n'));
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+renderMats('estructura');
+renderMats('acabados');
+renderMats('refuerzos');
+renderMO();
+drawSVGs();
+</script>
 </body>
 </html>
